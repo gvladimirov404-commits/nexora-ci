@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "policy_id": "nexora-ci-trusted-prototype-v2",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "14a90d9d020acc556b933db7e1f201afeb26c3b40c5f2f568efa1cc3a7c27ffd"
+    },
+    {
+      "path": "foundry.toml",
+      "sha256": "9fe0be1ab3ba50851dc8841d988946d671973cf2a3103704728de7c1c1a12f4e"
+    },
+    {
+      "path": "run_trusted_tests.py",
+      "sha256": "698587c59214197ca22e6579c5858bed7e25fe94f75aa54480439b237b1c69b7"
+    },
+    {
+      "path": "tests/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tests/test_attestation_fail_closed.py",
+      "sha256": "a21122cd19e6491c13f0fd6bb3be0aeb4e448cc126c935941c1de917e1e545c5"
+    },
+    {
+      "path": "tests/test_attestation_policy.py",
+      "sha256": "fadf2ebd0eb6d2a321331137481d794de536e215b57db10b423f5c66a75e42fd"
+    },
+    {
+      "path": "tests/test_attestation_policy_contract.py",
+      "sha256": "3782483b7ee70441ebb0d2c5403c17a04e1e45960376f00273bbca87f6fd6188"
+    },
+    {
+      "path": "tests/test_trust_boundary.py",
+      "sha256": "a4b9a0102afa089b88c24d3cf2b9b1b75856a918d84bc2ef30097db470fe6171"
+    },
+    {
+      "path": "trusted-tests.policy.json",
+      "sha256": "b4965a9cc4b859563eab61c01ef15cd65170ca1f208f06d930fdb249855eba05"
+    },
+    {
+      "path": "verifier/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "verifier/attestation_policy.py",
+      "sha256": "345ecbd1e1499ec244f6366ad828559e86cd504b53251998bdd8bfbefe883f00"
+    },
+    {
+      "path": "verifier/gh_attestation_adapter.py",
+      "sha256": "0c5a6b81e0df0d821b00ecc586f63b7487f4c314719c26b6470c0b3994833e3a"
+    },
+    {
+      "path": "verify_manifest.py",
+      "sha256": "54f13f3cffaaff6b0277cc773ba26ad71147938d9b73e473545e10edd92f4f1e"
+    }
+  ]
+}

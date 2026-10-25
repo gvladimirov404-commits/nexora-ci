@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.venv/
+.freebuff/
+audit-backup-*/
+.stage1-backup-*/

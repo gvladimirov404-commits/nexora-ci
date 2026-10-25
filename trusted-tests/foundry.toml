@@ -1,0 +1,12 @@
+# Reserved trusted baseline for a future reviewed Forge run.
+# The minimal workflow does not execute Forge and does not apply this file yet.
+# If Forge is enabled later, pin solc, dependencies, and the Foundry binary, and
+# overwrite or ignore the candidate foundry.toml. Never treat candidate config
+# or candidate tests as policy authority.
+[profile.default]
+src = "src"
+test = "test"
+libs = ["lib"]
+ffi = false
+fs_permissions = []
+auto_detect_solc = true

@@ -1,0 +1,96 @@
+# Minimal trusted-CI prototype.
+#
+# This workflow does NOT generate an attestation. The GitHub attestation JSON
+# schema and gh signer semantics remain unverified; see
+# docs/GH_ATTESTATION_SCHEMA.md.
+#
+# Candidate files are checked out only and never executed. Candidate tests,
+# foundry.toml, remappings, libraries, scripts, dependencies, and FFI settings
+# are therefore not trusted and cannot influence the test result. Trusted tests
+# and the verifier come from this repository, and the manifest digest is pinned
+# below. Running this workflow is meaningful only from a protected main branch.
+name: Verify NEXORA (trusted prototype)
+
+on:
+  workflow_dispatch:
+    inputs:
+      nexora_ref:
+        description: Exact 40-character lowercase NEXORA commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-nexora-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  trusted-verification:
+    name: Trusted manifest and policy tests (no attestation)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      NEXORA_REF: ${{ inputs.nexora_ref }}
+      TRUSTED_MANIFEST_SHA256: "43a9267f210f201805bc21e06ce3bee64d934319929c9524403199d70d2f4ceb"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONNOUSERSITE: "1"
+      FOUNDRY_FFI: "false"
+
+    steps:
+      - name: Validate requested commit SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$NEXORA_REF" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Expected a full 40-character lowercase commit SHA"
+            exit 1
+          fi
+
+      - name: Checkout trusted nexora-ci commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.sha }}
+          path: trusted-ci
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Checkout candidate commit without executing it
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: gvladimirov404-commits/nexora
+          ref: ${{ inputs.nexora_ref }}
+          path: nexora
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Confirm exact candidate checkout
+        working-directory: nexora
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$NEXORA_REF"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          printf 'candidate_commit=%s\ncandidate_tree=%s\n' \
+            "$NEXORA_REF" "$(git rev-parse 'HEAD^{tree}')"
+
+      - name: Verify pinned trusted manifest digest
+        working-directory: trusted-ci
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s  %s\n' \
+            "$TRUSTED_MANIFEST_SHA256" \
+            trusted-tests/trusted-tests.manifest.json \
+            | sha256sum --check --strict -
+
+      - name: Run approved trusted suite
+        working-directory: trusted-ci
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 trusted-tests/run_trusted_tests.py
