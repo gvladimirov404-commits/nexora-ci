@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sys
+import types
 import unittest
 from pathlib import Path
 
@@ -11,7 +12,25 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from verify_manifest import ManifestError, verify_trusted_suite  # noqa: E402
+
+def _load_source_module(name: str, path: Path) -> types.ModuleType:
+    """Compile trusted source directly so a poisoned __pycache__ is never loaded."""
+    module = types.ModuleType(name)
+    module.__file__ = str(path)
+    module.__package__ = ""
+    code = compile(path.read_bytes(), str(path), "exec")
+    sys.modules[name] = module
+    try:
+        exec(code, module.__dict__)
+    except BaseException:
+        sys.modules.pop(name, None)
+        raise
+    return module
+
+
+_verify_manifest = _load_source_module("verify_manifest", ROOT / "verify_manifest.py")
+ManifestError = _verify_manifest.ManifestError
+verify_trusted_suite = _verify_manifest.verify_trusted_suite
 
 
 def _iter_tests(suite: unittest.TestSuite):

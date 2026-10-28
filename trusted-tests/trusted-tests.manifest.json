@@ -12,7 +12,7 @@
     },
     {
       "path": "run_trusted_tests.py",
-      "sha256": "698587c59214197ca22e6579c5858bed7e25fe94f75aa54480439b237b1c69b7"
+      "sha256": "49c2aac19fc308b1939d59c577c8621d1cf3cfe01150851fad81c75b789703f7"
     },
     {
       "path": "tests/__init__.py",
@@ -32,11 +32,11 @@
     },
     {
       "path": "tests/test_trust_boundary.py",
-      "sha256": "a4b9a0102afa089b88c24d3cf2b9b1b75856a918d84bc2ef30097db470fe6171"
+      "sha256": "7b3dd4edfd372ec971d59939b589f16a096dbfff2a2ce619224f959385f8c83a"
     },
     {
       "path": "trusted-tests.policy.json",
-      "sha256": "b4965a9cc4b859563eab61c01ef15cd65170ca1f208f06d930fdb249855eba05"
+      "sha256": "b859c7c38ae7fc5a208d06ac135050e8ee25ae0d971585cdc99d92934dff0434"
     },
     {
       "path": "verifier/__init__.py",
@@ -52,7 +52,7 @@
     },
     {
       "path": "verify_manifest.py",
-      "sha256": "54f13f3cffaaff6b0277cc773ba26ad71147938d9b73e473545e10edd92f4f1e"
+      "sha256": "e202b99d20eb279928c9edfdac45689509ecbcc376cbeb6dc8bc87a1ff83b903"
     }
   ]
 }

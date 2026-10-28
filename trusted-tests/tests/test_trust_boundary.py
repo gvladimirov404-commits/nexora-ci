@@ -1,7 +1,11 @@
 import hashlib
+import importlib.util
 import json
+import marshal
 import os
 import shutil
+import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -19,6 +23,18 @@ FIXTURE_TEST_NAME = "tests.test_ok.OkTests.test_ok"
 
 def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def write_timestamp_pyc(source_path, code_source):
+    code = compile(code_source, str(source_path), "exec")
+    stat_result = source_path.stat()
+    header = importlib.util.MAGIC_NUMBER + struct.pack(
+        "<III", 0, int(stat_result.st_mtime), stat_result.st_size
+    )
+    cache_path = Path(importlib.util.cache_from_source(str(source_path)))
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_bytes(header + marshal.dumps(code))
+    return cache_path
 
 
 def file_entries(root):
@@ -238,6 +254,22 @@ class TrustedSuiteManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(verify_manifest.ManifestError, "unapproved"):
             verify_manifest.verify_trusted_suite(self.root)
 
+    def test_rejects_empty_pycache_directory(self):
+        (self.root / "tests" / "__pycache__").mkdir()
+        with self.assertRaisesRegex(
+            verify_manifest.ManifestError, "unapproved __pycache__ directory"
+        ):
+            verify_manifest.verify_trusted_suite(self.root)
+
+    def test_rejects_poisoned_pycache_directory(self):
+        cache = self.root / "tests" / "__pycache__"
+        cache.mkdir()
+        (cache / "test_ok.cpython-999.pyc").write_bytes(b"poisoned bytecode")
+        with self.assertRaisesRegex(
+            verify_manifest.ManifestError, "unapproved __pycache__ directory"
+        ):
+            verify_manifest.verify_trusted_suite(self.root)
+
     def test_rejects_duplicate_policy_json_keys(self):
         (self.root / verify_manifest.POLICY_NAME).write_text(
             '{"schema_version": 1, "policy_id": "a", "policy_id": "b", '
@@ -263,6 +295,60 @@ class TrustedSuiteManifestTests(unittest.TestCase):
             verify_manifest.ManifestError, "invalid expected test name"
         ):
             verify_manifest.verify_trusted_suite(self.root)
+
+    def test_runner_ignores_poisoned_verifier_bytecode(self):
+        root = self._fresh_suite()
+        shutil.copyfile(
+            TRUSTED_ROOT / "run_trusted_tests.py", root / "run_trusted_tests.py"
+        )
+        shutil.copyfile(
+            TRUSTED_ROOT / "verify_manifest.py", root / "verify_manifest.py"
+        )
+        write_manifest(root)
+
+        poison = (
+            "MARKER = 'poison-loaded'\n"
+            "from types import SimpleNamespace\n"
+            "class ManifestError(ValueError):\n"
+            "    pass\n"
+            "def verify_trusted_suite(root):\n"
+            "    return SimpleNamespace(\n"
+            "        policy_id='poisoned-fixture',\n"
+            f"        expected_test_names=({FIXTURE_TEST_NAME!r},),\n"
+            "        manifest_sha256='0' * 64,\n"
+            "        files={},\n"
+            "    )\n"
+        )
+        write_timestamp_pyc(root / "verify_manifest.py", poison)
+
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+        probe = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                "-c",
+                "import sys; sys.path.insert(0, '.'); "
+                "import verify_manifest; print(verify_manifest.MARKER)",
+            ],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertEqual(probe.returncode, 0, probe.stderr)
+        self.assertEqual(probe.stdout.strip(), "poison-loaded")
+
+        run = subprocess.run(
+            [sys.executable, str(root / "run_trusted_tests.py")],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertNotEqual(run.returncode, 0, run.stdout)
+        self.assertIn("__pycache__", run.stderr)
 
 
 if __name__ == "__main__":

@@ -236,7 +236,9 @@ def _scan_unapproved(root: Path, approved: frozenset[str]) -> None:
                 raise ManifestError(f"symlink in trusted suite: {relative}")
             if entry.is_dir(follow_symlinks=False):
                 if entry.name == "__pycache__":
-                    continue
+                    raise ManifestError(
+                        f"unapproved __pycache__ directory in trusted suite: {relative}"
+                    )
                 walk(Path(entry.path), relative)
             elif entry.is_file(follow_symlinks=False):
                 if relative == MANIFEST_NAME:

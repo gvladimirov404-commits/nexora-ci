@@ -36,13 +36,14 @@ jobs:
       contents: read
     env:
       NEXORA_REF: ${{ inputs.nexora_ref }}
-      TRUSTED_MANIFEST_SHA256: "43a9267f210f201805bc21e06ce3bee64d934319929c9524403199d70d2f4ceb"
+      TRUSTED_MANIFEST_SHA256: "34cdc1973ff7e0d35623f60039f01773aef4fbe978b11dbbc47e8bdf1fec85af"
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONNOUSERSITE: "1"
       FOUNDRY_FFI: "false"
 
     steps:
       - name: Validate requested commit SHA
+        id: validate
         shell: bash
         run: |
           set -euo pipefail
@@ -50,6 +51,7 @@ jobs:
             echo "::error::Expected a full 40-character lowercase commit SHA"
             exit 1
           fi
+          echo "sha=$NEXORA_REF" >> "$GITHUB_OUTPUT"
 
       - name: Checkout trusted nexora-ci commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -63,7 +65,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: gvladimirov404-commits/nexora
-          ref: ${{ inputs.nexora_ref }}
+          ref: ${{ steps.validate.outputs.sha }}
           path: nexora
           persist-credentials: false
           fetch-depth: 1
