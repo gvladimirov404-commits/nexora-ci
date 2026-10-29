@@ -4,7 +4,7 @@
   "files": [
     {
       "path": "README.md",
-      "sha256": "14a90d9d020acc556b933db7e1f201afeb26c3b40c5f2f568efa1cc3a7c27ffd"
+      "sha256": "1045f537b21f227b48c442c3be828047dd4160c46cb0afbd6a8081108fca26c4"
     },
     {
       "path": "foundry.toml",
@@ -24,7 +24,7 @@
     },
     {
       "path": "tests/test_attestation_policy.py",
-      "sha256": "fadf2ebd0eb6d2a321331137481d794de536e215b57db10b423f5c66a75e42fd"
+      "sha256": "3491f8ee4fe4220f07b14f62be539de257649bc51cff7ad5b40d1db800afe9c1"
     },
     {
       "path": "tests/test_attestation_policy_contract.py",
@@ -32,11 +32,15 @@
     },
     {
       "path": "tests/test_trust_boundary.py",
-      "sha256": "7b3dd4edfd372ec971d59939b589f16a096dbfff2a2ce619224f959385f8c83a"
+      "sha256": "fd9175a880aa581669522aea13614f267f3bdf1b523193f76dbdb255d09c74ab"
+    },
+    {
+      "path": "tests/test_workflow_contract.py",
+      "sha256": "598ac722c964bd384427d0f5db7d6316e863a00d51b2cc994d6623d030905e3a"
     },
     {
       "path": "trusted-tests.policy.json",
-      "sha256": "b859c7c38ae7fc5a208d06ac135050e8ee25ae0d971585cdc99d92934dff0434"
+      "sha256": "e910b4ae7c29d45f9040a30a2eb731323718441e1b1fa42d243df7da3c49b439"
     },
     {
       "path": "verifier/__init__.py",
@@ -44,7 +48,7 @@
     },
     {
       "path": "verifier/attestation_policy.py",
-      "sha256": "345ecbd1e1499ec244f6366ad828559e86cd504b53251998bdd8bfbefe883f00"
+      "sha256": "31976a1818376b8277c8f063b6e9059b707a819e1d4b8e61fc262cb89104d6f8"
     },
     {
       "path": "verifier/gh_attestation_adapter.py",

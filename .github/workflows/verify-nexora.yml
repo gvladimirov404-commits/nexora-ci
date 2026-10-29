@@ -5,10 +5,12 @@
 # docs/GH_ATTESTATION_SCHEMA.md.
 #
 # Candidate files are checked out only and never executed. Candidate tests,
-# foundry.toml, remappings, libraries, scripts, dependencies, and FFI settings
-# are therefore not trusted and cannot influence the test result. Trusted tests
-# and the verifier come from this repository, and the manifest digest is pinned
-# below. Running this workflow is meaningful only from a protected main branch.
+# foundry.toml, remappings, libraries, scripts, dependencies, submodules, and FFI
+# settings are therefore not trusted and cannot influence the test result.
+# Trusted tests and the verifier come from this repository, and the manifest
+# digest is pinned below. Running this workflow is meaningful only from the
+# protected main branch of the canonical nexora-ci repository; the guard job
+# below fails closed on any other repository or ref.
 name: Verify NEXORA (trusted prototype)
 
 on:
@@ -27,8 +29,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ref-guard:
+    name: Require canonical repository main ref
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Reject non-canonical or non-main runs
+        shell: bash
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+          WORKFLOW_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "$WORKFLOW_REPOSITORY" != "gvladimirov404-commits/nexora-ci" ]; then
+            echo "::error::Refusing to run outside the canonical nexora-ci repository"
+            exit 1
+          fi
+          if [ "$WORKFLOW_REF" != "refs/heads/main" ]; then
+            echo "::error::Refusing to run outside refs/heads/main"
+            exit 1
+          fi
+
   trusted-verification:
     name: Trusted manifest and policy tests (no attestation)
+    needs: ref-guard
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -36,7 +61,7 @@ jobs:
       contents: read
     env:
       NEXORA_REF: ${{ inputs.nexora_ref }}
-      TRUSTED_MANIFEST_SHA256: "34cdc1973ff7e0d35623f60039f01773aef4fbe978b11dbbc47e8bdf1fec85af"
+      TRUSTED_MANIFEST_SHA256: "610c10e32c756b890917ab76dc6ee50781ab73e0d384a260f1a6d76d5df65521"
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONNOUSERSITE: "1"
       FOUNDRY_FFI: "false"
@@ -60,6 +85,15 @@ jobs:
           path: trusted-ci
           persist-credentials: false
           fetch-depth: 1
+          submodules: false
+
+      - name: Confirm exact trusted checkout
+        working-directory: trusted-ci
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --untracked-files=no --ignore-submodules=all)"
 
       - name: Checkout candidate commit without executing it
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -69,6 +103,7 @@ jobs:
           path: nexora
           persist-credentials: false
           fetch-depth: 1
+          submodules: false
 
       - name: Confirm exact candidate checkout
         working-directory: nexora
@@ -76,7 +111,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$NEXORA_REF"
-          test -z "$(git status --porcelain --untracked-files=no)"
+          # Submodules are never initialized or executed; ignore their absent
+          # working-tree state so a legitimate gitlink does not false-fail.
+          test -z "$(git status --porcelain --untracked-files=no --ignore-submodules=all)"
           printf 'candidate_commit=%s\ncandidate_tree=%s\n' \
             "$NEXORA_REF" "$(git rev-parse 'HEAD^{tree}')"
 
@@ -95,4 +132,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 trusted-tests/run_trusted_tests.py
+          python3 --version
+          python3 -I trusted-tests/run_trusted_tests.py

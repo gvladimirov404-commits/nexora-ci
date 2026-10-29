@@ -20,6 +20,10 @@ GitHub workflow.
 - `trusted-tests/`: independent reviewed tests for the trust mechanism, a
   policy, a canonical SHA-256 manifest, a fail-closed manifest verifier, and a
   runner that executes only approved unittest IDs.
+- `trusted-tests/tests/test_workflow_contract.py`: text-level regression guards
+  for the committed workflow configuration (permissions, pinned actions,
+  credential/submodule checkout settings, canonical-main guard, validated
+  candidate SHA, isolated Python invocation, and manifest pin agreement).
 - `.github/workflows/verify-nexora.yml`: minimal main-gated, read-only prototype
   that verifies the pinned trusted manifest and runs trusted tests. It never
   executes candidate files, installs dependencies, runs Forge, requests OIDC, or
@@ -52,7 +56,12 @@ library.
 The candidate NEXORA commit is checked out at an exact 40-character SHA and its
 `HEAD` is confirmed, but no candidate file is executed. Trusted tests and the
 verifier come from this repository at `github.sha`. The workflow pins the
-manifest digest in YAML and verifies it before running tests.
+manifest digest in YAML and verifies it before running tests. A `ref-guard` job
+fails closed unless the run is in the canonical `nexora-ci` repository on
+`refs/heads/main`; the trusted checkout `HEAD` is confirmed; both checkouts
+disable credential persistence and submodules; uninitialized submodule state is
+ignored when checking the candidate tree; and the suite runs under
+`python3 -I`.
 
 Running the workflow does **not** create evidence that NEXORA passed its own
 tests, does **not** test NEXORA contracts, and does **not** produce an

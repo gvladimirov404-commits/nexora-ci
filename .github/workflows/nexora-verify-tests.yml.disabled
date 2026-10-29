@@ -1,0 +1,46 @@
+# DESIGN DRAFT ONLY — intentionally disabled by the .yml.disabled suffix.
+#
+# The active minimal prototype is verify-nexora.yml. This draft must remain
+# disabled until:
+#   1. the real gh attestation JSON schema and signer semantics are confirmed,
+#   2. the trusted test suite includes independent NEXORA contract tests, and
+#   3. a separate signing job with reviewed artifact-digest checks is approved.
+#
+# It deliberately contains no attestation request and no signing job. Enabling
+# it can only fail closed.
+name: NEXORA attestation design draft (DISABLED)
+
+on:
+  workflow_dispatch:
+    inputs:
+      nexora_ref:
+        description: Exact 40-character lowercase commit SHA in the NEXORA repository
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  preflight-only:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Validate caller ref and source SHA
+        env:
+          NEXORA_REF: ${{ inputs.nexora_ref }}
+          WORKFLOW_REF: ${{ github.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$WORKFLOW_REF" = "refs/heads/main"
+          [[ "$NEXORA_REF" =~ ^[0-9a-f]{40}$ ]]
+      - name: Fail closed until schema and signing design are approved
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Attestation remains disabled: schema, signer semantics, and signing job are unapproved." >&2
+          exit 1

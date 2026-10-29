@@ -202,6 +202,30 @@ class TrustedSuiteManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(verify_manifest.ManifestError, "duplicate JSON key"):
             verify_manifest.verify_trusted_suite(self.root)
 
+    def test_rejects_nonstandard_json_constant_in_manifest(self):
+        (self.root / verify_manifest.MANIFEST_NAME).write_text(
+            '{"schema_version": NaN, "policy_id": "a", "files": []}',
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+            verify_manifest.ManifestError, "non-standard JSON constant"
+        ):
+            verify_manifest.verify_trusted_suite(self.root)
+
+    def test_rejects_boolean_schema_version(self):
+        (self.root / verify_manifest.MANIFEST_NAME).write_text(
+            json.dumps(
+                {
+                    "schema_version": True,
+                    "policy_id": FIXTURE_POLICY_ID,
+                    "files": file_entries(self.root),
+                }
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(verify_manifest.ManifestError, "schema_version"):
+            verify_manifest.verify_trusted_suite(self.root)
+
     def test_rejects_policy_id_mismatch(self):
         write_policy(self.root, policy_id="other-policy")
         write_manifest(self.root)
@@ -209,7 +233,11 @@ class TrustedSuiteManifestTests(unittest.TestCase):
             verify_manifest.verify_trusted_suite(self.root)
 
     def test_rejects_invalid_expected_test_set(self):
-        for expected in ([], ["tests.test_ok.OkTests.test_ok", "tests.test_ok.OkTests.test_ok"]):
+        for expected in (
+            [],
+            ["tests.test_ok.OkTests.test_ok", "tests.test_ok.OkTests.test_ok"],
+            "tests.test_ok.OkTests.test_ok",
+        ):
             with self.subTest(expected=expected):
                 write_policy(self.root, expected=expected)
                 write_manifest(self.root)
@@ -241,6 +269,16 @@ class TrustedSuiteManifestTests(unittest.TestCase):
         ):
             verify_manifest.verify_trusted_suite(self.root)
 
+    def test_rejects_control_character_manifest_path(self):
+        entries = file_entries(self.root)
+        entries[0]["path"] = "tests/bad\x01name.py"
+        entries.sort(key=lambda entry: entry["path"])
+        write_manifest(self.root, entries)
+        with self.assertRaisesRegex(
+            verify_manifest.ManifestError, "inside the trusted suite"
+        ):
+            verify_manifest.verify_trusted_suite(self.root)
+
     def test_rejects_manifest_listing_itself(self):
         entries = file_entries(self.root)
         entries.append({"path": verify_manifest.MANIFEST_NAME, "sha256": "0" * 64})
@@ -265,6 +303,15 @@ class TrustedSuiteManifestTests(unittest.TestCase):
         cache = self.root / "tests" / "__pycache__"
         cache.mkdir()
         (cache / "test_ok.cpython-999.pyc").write_bytes(b"poisoned bytecode")
+        with self.assertRaisesRegex(
+            verify_manifest.ManifestError, "unapproved __pycache__ directory"
+        ):
+            verify_manifest.verify_trusted_suite(self.root)
+
+    def test_rejects_nested_pycache_directory(self):
+        cache = self.root / "verifier" / "__pycache__"
+        cache.mkdir()
+        (cache / "attestation_policy.cpython-999.pyc").write_bytes(b"poisoned")
         with self.assertRaisesRegex(
             verify_manifest.ManifestError, "unapproved __pycache__ directory"
         ):
@@ -349,6 +396,32 @@ class TrustedSuiteManifestTests(unittest.TestCase):
         )
         self.assertNotEqual(run.returncode, 0, run.stdout)
         self.assertIn("__pycache__", run.stderr)
+
+    def test_runner_rejects_test_set_drift(self):
+        root = self._fresh_suite()
+        shutil.copyfile(
+            TRUSTED_ROOT / "run_trusted_tests.py", root / "run_trusted_tests.py"
+        )
+        shutil.copyfile(
+            TRUSTED_ROOT / "verify_manifest.py", root / "verify_manifest.py"
+        )
+        write_policy(
+            root,
+            expected=[FIXTURE_TEST_NAME, "tests.test_ok.OkTests.test_absent"],
+        )
+        write_manifest(root)
+
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+        run = subprocess.run(
+            [sys.executable, "-B", str(root / "run_trusted_tests.py")],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        self.assertNotEqual(run.returncode, 0, run.stdout)
+        self.assertIn("test set does not match policy", run.stderr)
 
 
 if __name__ == "__main__":

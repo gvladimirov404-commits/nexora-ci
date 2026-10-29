@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
-_REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+_REPOSITORY_PART_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 _TEST_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
 _PASS_RESULT = "PASS"
 _PREDICATE_KEYS = frozenset(
@@ -33,6 +33,18 @@ class PolicyError(ValueError):
     """Raised when verification evidence does not satisfy the local policy."""
 
 
+def _is_valid_repository(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    parts = value.split("/")
+    if len(parts) != 2:
+        return False
+    return all(
+        part not in ("", ".", "..") and _REPOSITORY_PART_RE.fullmatch(part)
+        for part in parts
+    )
+
+
 @dataclass(frozen=True)
 class AttestationPolicy:
     repository: str
@@ -43,7 +55,7 @@ class AttestationPolicy:
     expected_test_names: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        if not isinstance(self.repository, str) or not _REPOSITORY_RE.fullmatch(self.repository):
+        if not _is_valid_repository(self.repository):
             raise PolicyError("repository must be OWNER/REPO")
         if not isinstance(self.source_sha, str) or not _GIT_SHA_RE.fullmatch(self.source_sha):
             raise PolicyError("source_sha must be a full lowercase 40-character Git SHA")

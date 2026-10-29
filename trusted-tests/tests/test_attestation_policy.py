@@ -84,7 +84,17 @@ def make_gh_document():
 
 class PolicyConstructionTests(unittest.TestCase):
     def test_rejects_invalid_repository(self):
-        for repository in ("", "owner", "owner/repo/extra", "owner /repo"):
+        for repository in (
+            "",
+            "owner",
+            "owner/repo/extra",
+            "owner /repo",
+            "../..",
+            "../repo",
+            "owner/..",
+            "./repo",
+            "owner/.",
+        ):
             with self.subTest(repository=repository), self.assertRaisesRegex(
                 PolicyError, "repository"
             ):
@@ -306,6 +316,11 @@ class NormalizedAttestationTests(unittest.TestCase):
 
 
 class GhAdapterTests(unittest.TestCase):
+    def test_schema_confirmation_requires_explicit_reviewed_change(self):
+        # Flipping SCHEMA_CONFIRMED disables the refusal tests below via skipIf.
+        # Fail loudly instead of silently skipping the negative coverage.
+        self.assertIs(SCHEMA_CONFIRMED, False)
+
     @unittest.skipIf(SCHEMA_CONFIRMED, "schema is marked confirmed")
     def test_adapter_refuses_unconfirmed_schema_by_default(self):
         with self.assertRaisesRegex(PolicyError, "disabled.*schema"):
